@@ -1,93 +1,75 @@
-############################################################################
-## EXAMPLE TEMPLATE for generic IOC container image build file            ##
-##                                                                        ##
-## Search for 'TODO' in this file and perform the documented actions      ##
-## TODO - replace this header with a desccription of the support modules  ##
-##    you are adding in this build                                        ##
-############################################################################
-
-## TODO change this to the registry that the base image resides in
+# Add support for Aerotech Automation1 motion controllers
 ARG REGISTRY=ghcr.io/epics-containers
-## TODO replace below with base image version you want to use
-ARG ADCORE_VERSION=3.10r3.0
+ARG MODULES_VERSION=4.41r3.0
 
-## TODO replace these examples with the new support module(s) version number(s) ##
-ARG ADARAVIS_VERSION=R2-2-1
-ARG ADGENICAM_VERSION=R1-8
+ARG MOTOR_VERSION=R7-2-1
+ARG IPAC_VERSION=2.16
+ARG MOTOR_AUTOMATION1_VERSION=dls
+ARG AEROTECH_BIN=Aerotech_H_SO
+##### build stage ##############################################################
 
-##### runtime stage ############################################################
+FROM ${REGISTRY}/epics-modules:${MODULES_VERSION} AS developer
 
-## TODO replace below with base image tag you want to use
-FROM ${REGISTRY}/epics-areadetector:${ADCORE_VERSION} AS developer
+ARG MOTOR_VERSION
+ARG MOTOR_AUTOMATION1_VERSION
+ARG IPAC_VERSION
+ARG AEROTECH_BIN
 
-## TODO declare global args for reuse in this build stage
-ARG ADARAVIS_VERSION
-ARG ADGENICAM_VERSION
+ENV LD_LIBRARY_PATH=${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/bin/linux-x86_64:${LD_LIBRARY_PATH}
 
 # install additional tools and libs
 USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    ## TODO replace busybox with any required libraries/tools ##
-    busybox-static \
-    && rm -rf /var/lib/apt/lists/*
-
-## TODO add any manual compilation or installation of tools or libraries here
+RUN apt-get update && apt-get upgrade -y \
+     && apt-get install -y --no-install-recommends \
+     libsodium-dev \
+     neovim \
+     && rm -rf /var/lib/apt/lists/*
 
 USER ${USERNAME}
 
 # get additional support modules
+RUN python3 module.py add epics-modules ipac IPAC ${IPAC_VERSION} && \
+    python3 module.py add epics-modules motor MOTOR ${MOTOR_VERSION} && \
+    python3 module.py add Observatory-Sciences motorAutomation1 MOTOR_AUTOMATION1 ${MOTOR_AUTOMATION1_VERSION}
 
-## TODO replace examples with support module(s) source locations ##
-# RUN python3 module.py add areaDetector ADGenICam ADGENICAM ${ADGENICAM_VERSION}
-# RUN python3 module.py add areaDetector ADAravis ADARAVIS ${ADARAVIS_VERSION}
+RUN cp ${SUPPORT}/motor-${MOTOR_VERSION}/motorApp/Db/basic_asyn_motor.db ${SUPPORT}/motor-${MOTOR_VERSION}/motorApp/Db/basic_asyn_motor.template
 
-# add CONFIG_SITE.linux and RELEASE.local
-## TODO create configure folder in context to make modules compatible with ubuntu  ##
-## TODO replace examples with support module configure folders ##
-# COPY --chown=${USER_UID}:${USER_GID} configure ${SUPPORT}/ADGenICam-${ADGENICAM_VERSION}/configure
-# COPY --chown=${USER_UID}:${USER_GID} configure ${SUPPORT}/ADAravis-${ADARAVIS_VERSION}/configure
+RUN mkdir ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Lib/
+RUN mkdir ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Include/
 
-# update the generic IOC Makefile to include the new support
-## TODO Update Makefile in context as required
 COPY --chown=${USER_UID}:${USER_GID} Makefile ${EPICS_ROOT}/ioc/iocApp/src
+COPY --chown=${USER_UID}:${USER_GID} RELEASE.local ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/configure
+COPY --chown=${USER_UID}:${USER_GID} ${AEROTECH_BIN}/*.so ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Lib/
+COPY --chown=${USER_UID}:${USER_GID} ${AEROTECH_BIN}/*.h ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Include/
 
 # update dependencies and build the support modules and the ioc
 RUN python3 module.py dependencies
-## TODO replace examples with support module(s)
-RUN \
-    # make -j -C  ${SUPPORT}/ADGenICam-${ADGENICAM_VERSION} && \
-    # make -j -C  ${SUPPORT}/ADAravis-${ADARAVIS_VERSION} && \
-    make -j -C  ${IOC} && \
+RUN make -j -C  ${SUPPORT}/motor-${MOTOR_VERSION}
+RUN make -C  ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}
+RUN make -j -C ${IOC} && \
     make -j clean
-
 
 ##### runtime stage ############################################################
 
-FROM ${REGISTRY}/epics-areadetector:${ADCORE_VERSION}.run AS runtime
+FROM ${REGISTRY}/epics-modules:${MODULES_VERSION}.run AS runtime
 
-## TODO declare global args for reuse in this build stage
-ARG ADARAVIS_VERSION
-ARG ADGENICAM_VERSION
+ARG MOTOR_VERSION
+ARG MOTOR_AUTOMATION1_VERSION
+ARG IPAC_VERSION
+ARG AEROTECH_BIN
+
+ENV LD_LIBRARY_PATH=${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/bin/linux-x86_64:${LD_LIBRARY_PATH}
 
 # install runtime libraries from additional packages section above
 USER root
 
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    ## TODO replace busybox with any required RUNTIME libraries/tools ##
-    busybox-static \
-    && rm -rf /var/lib/apt/lists/*
-
-## TODO copy any manually built RUNTIME files
-# COPY --from=developer /usr/lib/librdkafka* /usr/lib/
+RUN apt-get update && apt-get upgrade -y \
+     && rm -rf /var/lib/apt/lists/*
 
 USER ${USERNAME}
 
-## TODO add COPYs of the built module folders below
-# get the products from the build stage
-# COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/ADGenICam-${ADGENICAM_VERSION} ${SUPPORT}/ADGenICam-${ADGENICAM_VERSION}
-# COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/ADAravis-${ADARAVIS_VERSION} ${SUPPORT}/ADAravis-${ADARAVIS_VERSION}
+COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/motor-${MOTOR_VERSION} ${SUPPORT}/motor-${MOTOR_VERSION}
+COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION} ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}
 COPY --from=developer --chown=${USER_UID}:${USER_GID} ${IOC} ${IOC}
