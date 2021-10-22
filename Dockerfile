@@ -74,3 +74,4 @@ USER ${USERNAME}
 COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/motor-${MOTOR_VERSION} ${SUPPORT}/motor-${MOTOR_VERSION}
 COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION} ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}
 COPY --from=developer --chown=${USER_UID}:${USER_GID} ${IOC} ${IOC}
+COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/configure ${SUPPORT}/configure
