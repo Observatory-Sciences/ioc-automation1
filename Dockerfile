@@ -24,7 +24,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get upgrade -y \
      && apt-get install -y --no-install-recommends \
      libsodium-dev \
-     neovim \
      && rm -rf /var/lib/apt/lists/*
 
 USER ${USERNAME}
@@ -66,6 +65,8 @@ ENV LD_LIBRARY_PATH=${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/bin
 USER root
 
 RUN apt-get update && apt-get upgrade -y \
+     && apt-get install -y --no-install-recommends \
+     libsodium-dev \
      && rm -rf /var/lib/apt/lists/*
 
 USER ${USERNAME}
