@@ -1,4 +1,7 @@
-TODO update with correct comment for included support module
+A continaer image for an IOC using the motorAutomation1 support module.
 
-A container image template for creating new generic IOCs
+NOTE:  The container cannot be built by Github CI as it requires access to Aerotech
+binaries.
 
+To build the container locally, extract the Aerotech SDK into this directory under
+Aerotech_H_SO/, then run `docker build .`.
