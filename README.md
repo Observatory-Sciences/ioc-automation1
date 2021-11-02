@@ -1,4 +1,4 @@
-A continaer image for an IOC using the motorAutomation1 support module.
+A contianer image for an IOC using the motorAutomation1 support module.
 
 NOTE:  The container cannot be built by Github CI as it requires access to Aerotech
 binaries.
