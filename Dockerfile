@@ -38,10 +38,10 @@ RUN cp ${SUPPORT}/motor-${MOTOR_VERSION}/motorApp/Db/basic_asyn_motor.db ${SUPPO
 RUN mkdir ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Lib/
 RUN mkdir ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Include/
 
-COPY --chown=${USER_UID}:${USER_GID} Makefile ${EPICS_ROOT}/ioc/iocApp/src
-COPY --chown=${USER_UID}:${USER_GID} RELEASE.local ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/configure
-COPY --chown=${USER_UID}:${USER_GID} ${AEROTECH_BIN}/*.so ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Lib/
-COPY --chown=${USER_UID}:${USER_GID} ${AEROTECH_BIN}/*.h ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Include/
+COPY Makefile ${EPICS_ROOT}/ioc/iocApp/src
+COPY RELEASE.local ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/configure
+COPY ${AEROTECH_BIN}/*.so ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Lib/
+COPY ${AEROTECH_BIN}/*.h ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/automation1Sup/Include/
 
 # update dependencies and build the support modules and the ioc
 RUN python3 module.py dependencies
@@ -49,29 +49,3 @@ RUN make -j -C  ${SUPPORT}/motor-${MOTOR_VERSION}
 RUN make -C  ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}
 RUN make -j -C ${IOC} && \
     make -j clean
-
-##### runtime stage ############################################################
-
-FROM ${REGISTRY}/epics-modules:${MODULES_VERSION}.run AS runtime
-
-ARG MOTOR_VERSION
-ARG MOTOR_AUTOMATION1_VERSION
-ARG IPAC_VERSION
-ARG AEROTECH_BIN
-
-ENV LD_LIBRARY_PATH=${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}/bin/linux-x86_64:${LD_LIBRARY_PATH}
-
-# install runtime libraries from additional packages section above
-USER root
-
-RUN apt-get update && apt-get upgrade -y \
-     && apt-get install -y --no-install-recommends \
-     libsodium-dev \
-     && rm -rf /var/lib/apt/lists/*
-
-USER ${USERNAME}
-
-COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/motor-${MOTOR_VERSION} ${SUPPORT}/motor-${MOTOR_VERSION}
-COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION} ${SUPPORT}/motorAutomation1-${MOTOR_AUTOMATION1_VERSION}
-COPY --from=developer --chown=${USER_UID}:${USER_GID} ${IOC} ${IOC}
-COPY --from=developer --chown=${USER_UID}:${USER_GID} ${SUPPORT}/configure ${SUPPORT}/configure
